@@ -41,10 +41,22 @@ npm install
 
 ## 3. Create .env File
 PORT=5000
-MONGO_URI=your_mongodb_connection_string
-EMAIL_USER=your_email@example.com
-EMAIL_PASS=your_email_password
-EMAIL_SERVICE=gmail # or any other service
 
-Run the Server
+# MongoDB
+MONGO_URL=your_mongodb_connection_string
+
+# session secret
+SECRET=your_secret_key
+
+# Cloudinary (image uploads)
+CLOUD_NAME=your_cloudinary_cloud_name
+CLOUD_API_KEY=your_cloudinary_api_key
+CLOUD_API_SECRET=your_cloudinary_api_secret
+
+# Email configuration
+EMAIL_USER=your_email_address
+EMAIL_PASS=your_email_password
+
+
+# Run the Server
 node app.js
