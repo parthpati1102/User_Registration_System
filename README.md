@@ -30,7 +30,7 @@ This project is a RESTful User Registration API built using **Node.js**, **Expre
 
 ## Setup Instructions
 
-1.Clone the Repository
+## 1.Clone the Repository
 ```bash
 git clone https://github.com/your-username/your-repo-name.git
 cd your-repo-name
