@@ -25,6 +25,8 @@ This project is a RESTful User Registration API built using **Node.js**, **Expre
 - dotenv (for managing environment variables)
 
 ---
+## 🌍 API Base URL
+[Backend Deployed on Render](https://user-registration-system-uniw.onrender.com/)
 
 ## Setup Instructions
 
@@ -34,15 +36,15 @@ This project is a RESTful User Registration API built using **Node.js**, **Expre
 git clone https://github.com/your-username/your-repo-name.git
 cd your-repo-name
 
-### 2. Install Dependencies
+**2. Install Dependencies**
 npm install
 
-### 3. Create .env File
+**3. Create .env File**
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 EMAIL_USER=your_email@example.com
 EMAIL_PASS=your_email_password
 EMAIL_SERVICE=gmail # or any other service
 
-### Run the Server
+**Run the Server**
 node app.js
