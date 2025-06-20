@@ -10,6 +10,7 @@ const ejs = require("ejs");
 const ejsMate = require("ejs-mate");
 
 const  sendEmail = require("./sendEmail.js");
+const crypto = require("crypto");
 const User = require("./models/user");
 
 const path = require("path");
@@ -18,9 +19,11 @@ const MongoStore = require('connect-mongo');
 const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
+
 const multer  = require('multer')
 const {storage} = require("./cloudConfig.js");
 const upload = multer({storage });
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 const {userSchema} = require("./schema.js");
 const wrapAsync = require("./utils/wrapAsync.js");
@@ -125,6 +128,52 @@ app.get("/login" , (req , res) => {
     res.render("user/login.ejs");
 })
 
+//Goolge Authentication
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      // Find user or create new
+      let existingUser = await User.findOne({ googleId: profile.id });
+
+      if (!existingUser) {
+        existingUser = new User({
+          googleId: profile.id,
+          name: profile.displayName || "No Name",
+          username: profile.displayName,
+          email: profile.emails[0].value,
+          profilePicture: {
+            url: profile.photos[0].value,
+            filename: "google-oauth"
+          }
+        });
+        await existingUser.save();
+      }
+
+      return done(null, existingUser);
+    } catch (err) {
+      return done(err, null);
+    }
+  }
+));
+
+// Add these routes below your existing routes:
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+// Step 2: Handle callback from Google
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login', failureFlash: true }),
+  (req, res) => {
+    req.flash("success", `Hello ${req.user.username}, Welcome via Google!`);
+    res.redirect('/index');
+  }
+);
+
 app.post("/register" , upload.single('user[profilePicture]') , validateUser , wrapAsync (async(req , res , next) => {
    try{
     let url = req.file.path;
@@ -207,6 +256,78 @@ app.get('/logout', (req, res, next) => {
       req.flash("success" , "Your are successfully logged out!");
       res.redirect('/index');
     });
+});
+
+//Forgot PAssword Functionality
+app.get("/forgot-password", (req, res) => {
+  res.render("user/forgot-password.ejs");
+});
+
+//Route to Handle Email Submission
+app.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    req.flash("error", "No user with that email.");
+    return res.redirect("/forgot-password");
+  }
+
+  // Generate token
+  const token = crypto.randomBytes(20).toString("hex");
+  user.resetPasswordToken = token;
+  user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+  await user.save();
+
+  // Send email
+  const resetURL = `http://${req.headers.host}/reset-password/${token}`;
+  await sendEmail(
+    user.email,
+    "Reset Your Password",
+    `<p>Click <a href="${resetURL}">here</a> to reset your password. This link expires in 1 hour.</p>`
+  );
+
+  req.flash("success", "Password reset link sent to your email.");
+  res.redirect("/login");
+});
+
+//Route to Show Reset Form
+app.get("/reset-password/:token", async (req, res) => {
+  const user = await User.findOne({
+    resetPasswordToken: req.params.token,
+    resetPasswordExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    req.flash("error", "Password reset token is invalid or has expired.");
+    return res.redirect("/forgot-password");
+  }
+
+  res.render("user/reset-password.ejs", { token: req.params.token });
+});
+
+app.post("/reset-password/:token", async (req, res) => {
+  const user = await User.findOne({
+    resetPasswordToken: req.params.token,
+    resetPasswordExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    req.flash("error", "Token expired or invalid.");
+    return res.redirect("/forgot-password");
+  }
+
+  const { password } = req.body;
+  await user.setPassword(password); // passport-local-mongoose method
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+
+  req.login(user, (err) => {
+    if (err) return next(err);
+    req.flash("success", "Password has been reset successfully!");
+    res.redirect("/index");
+  });
 });
 
 // Error Handing Middlwwares

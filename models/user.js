@@ -14,6 +14,17 @@ const userSchema = new mongoose.Schema({
     url : String,
     filename : String,
   },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  resetPasswordToken: {
+    type : String,
+  },
+  resetPasswordExpires: {
+    type  :  Date,
+  }
 });
 
 userSchema.plugin(passportLocalMongoose);
