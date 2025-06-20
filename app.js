@@ -143,7 +143,7 @@ passport.use(new GoogleStrategy({
         existingUser = new User({
           googleId: profile.id,
           name: profile.displayName || "No Name",
-          username: profile.displayName,
+          username: `google_${profile.id}`,
           email: profile.emails[0].value,
           profilePicture: {
             url: profile.photos[0].value,
