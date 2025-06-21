@@ -330,6 +330,61 @@ app.post("/reset-password/:token", async (req, res) => {
   });
 });
 
+//Login Using OTP
+app.get('/login-otp', (req, res) => {
+  res.render('user/login-otp.ejs');
+});
+
+app.get('/verify-otp', (req, res) => {
+  res.render('user/verify-otp.ejs', { email: req.query.email });
+});
+
+app.post('/send-otp', async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    req.flash("error", "Email not found");
+    return res.redirect('/login-otp');
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  user.otp = otp;
+  user.otpExpires = Date.now() + 5 * 60 * 1000; // valid for 5 minutes
+  await user.save();
+
+  await sendEmail(
+    user.email,
+    "Your OTP for Login",
+    `<p>Your login OTP is: <strong>${otp}</strong>. It expires in 5 minutes.</p>`
+  );
+
+  req.flash("success", "OTP sent to your email.");
+  res.redirect(`/verify-otp?email=${encodeURIComponent(email)}`);
+});
+
+app.post('/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user || user.otp !== otp || Date.now() > user.otpExpires) {
+    req.flash("error", "Invalid or expired OTP.");
+    return res.redirect('/login-otp');
+  }
+
+  // Clear OTP after successful login
+  user.otp = undefined;
+  user.otpExpires = undefined;
+  await user.save();
+
+  req.login(user, (err) => {
+    if (err) return next(err);
+    req.flash("success", `Welcome back, ${user.name}!`);
+    res.redirect("/index");
+  });
+});
+
+
 // Error Handing Middlwwares
 // app.all("*" , (req , res , next) => {
 //     next(new ExpressError(404 , "Page Not Found!"));

@@ -1,0 +1,7 @@
+<%- layout('/layouts/boilerplate.ejs') -%>
+
+<form action="/verify-otp" method="POST">
+  <input type="hidden" name="email" value="<%= email %>">
+  <input type="text" name="otp" required placeholder="Enter OTP" class="form-control">
+  <button type="submit" class="btn btn-success mt-3">Verify OTP</button>
+</form>
